@@ -1,259 +1,279 @@
 # SQA Analysis: `requests` — "HTTP for Humans"
 
 **Question answered:** How does the project perform Software Quality Assurance?
-**Project:** [`psf/requests`](https://github.com/psf/requests) — Python HTTP client library
+**Project:** `psf/requests` — Python HTTP client library
 **Scale:** ~300 M downloads/week · used by 4 M+ repositories
-**Presentation time:** ≤ 3 minutes
+**Presentation time:** ≤ 3 minutes · 3 slides
 
 ---
 
-## The Answer in One Sentence
-
-> The `requests` project performs QA through **three enforced layers**: static analysis (Verification), an automated test matrix (Validation), and a structured peer-review process — all gated by GitHub Actions CI on every single commit and pull request.
+# SLIDE STRUCTURE
 
 ---
 
-## Layer 1 — Static Analysis (Verification)
+## SLIDE 1 — Title & Thesis
+**Layout:** Title slide with subtitle and a 3-box icon row at the bottom
 
-> **SQA concept:** Verification = "Are we building the product right?" — checking code *without* running it.
+### On-Slide Content
 
-Three workflows run automatically on **every push and every PR**:
+**Title (large, centred):**
+> How does `requests` do Software QA?
 
-### 1a. Linting & Formatting — `lint.yml`
+**Subtitle (medium, centred):**
+> Python's most downloaded HTTP library — 300 M downloads/week, 4 M+ dependents
 
+**Three icon boxes (bottom row, equal width, each with a bold label + one-line caption):**
+
+| Box 1 | Box 2 | Box 3 |
+|-------|-------|-------|
+| 🔍 **Verification** | ✅ **Validation** | 📋 **Process Controls** |
+| Static analysis — check code without running it | Dynamic testing — run the software across every environment | Peer review & defect management |
+
+> _Hint for PowerPoint: use SmartArt "Three-Process" or three equal rectangle shapes._
+
+---
+
+### Presenter Notes — Slide 1 (≈ 30 sec)
+
+> "The project we're looking at is `requests` — it's the Python library everyone uses to make HTTP calls. It's downloaded 300 million times every week, which means its quality really matters.
+>
+> For our SQA question — how do they actually perform quality assurance — the answer comes down to three enforced layers: **Verification** through static analysis, **Validation** through automated testing, and **Process Controls** through structured peer review. Let me walk through each one."
+
+---
+---
+
+## SLIDE 2 — Verification & Validation (The Technical Evidence)
+**Layout:** Two-column content slide. Left column = Verification. Right column = Validation.
+
+### On-Slide Content
+
+**Slide title:**
+> Layers 1 & 2: Static Analysis + Automated Testing
+
+---
+
+**LEFT COLUMN — "Verification (Static Analysis)"**
+
+_Subtitle line:_ Every push & PR triggers three automated checks:
+
+**Bullet 1 — Linting & Formatting**
+`lint.yml` → runs **Ruff** via pre-commit
+- Checks PEP 8, unused imports, leftover debugger calls
+- Auto-fixes style before code can be merged
+
+_Code snippet (small font, code block):_
 ```yaml
 # .github/workflows/lint.yml
-name: Lint code
 on: [push, pull_request]
-
-jobs:
-  lint:
-    runs-on: ubuntu-24.04
-    steps:
-    - uses: actions/checkout@...
-    - name: Run pre-commit          # <-- enforces all hooks below
-      uses: pre-commit/action@...
+steps:
+  - name: Run pre-commit   # enforces Ruff lint + format
+    uses: pre-commit/action@...
 ```
 
-The `pre-commit` hook chain (`.pre-commit-config.yaml`):
+**Bullet 2 — Type Checking**
+`typecheck.yml` → runs **Pyright** in **strict mode**
+- Every function must have full type annotations
+- Runs on Python 3.10 AND 3.14
 
-```yaml
-# .pre-commit-config.yaml
-repos:
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  hooks:
-  - id: check-merge-conflict        # block accidental merge markers
-  - id: check-toml                  # validate config files
-  - id: trailing-whitespace
-  - id: end-of-file-fixer
-
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  hooks:
-    - id: ruff-check                # linter: PEP8, unused imports, debugger calls
-      args: [--fix]
-    - id: ruff-format               # formatter: Black-compatible style
-```
-
-Ruff rules configured in `pyproject.toml`:
-
-```toml
-# pyproject.toml
-[tool.ruff.lint]
-select = [
-    "E",    # pycodestyle errors (PEP 8)
-    "W",    # pycodestyle warnings
-    "F",    # pyflakes (undefined names, unused imports)
-    "I",    # isort (import ordering)
-    "UP",   # pyupgrade (modernize syntax)
-    "T10",  # flake8-debugger (no leftover breakpoints)
-]
-```
-
----
-
-### 1b. Type Checking — `typecheck.yml`
-
-```yaml
-# .github/workflows/typecheck.yml
-name: Type Check
-on: [push, pull_request]
-
-jobs:
-  typecheck:
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.14"]   # oldest + newest supported
-    steps:
-    - name: Run pyright
-      run: python -m pyright src/requests/
-```
-
-Configured in **strict mode** — every function signature must be fully typed:
-
+_Code snippet:_
 ```toml
 # pyproject.toml
 [tool.pyright]
-include = ["src/requests"]
-typeCheckingMode = "strict"           # highest bar — no untyped code allowed
+typeCheckingMode = "strict"  # highest possible bar
 ```
+
+**Bullet 3 — Security Scan**
+`codeql-analysis.yml` → **CodeQL** scans for Python vulnerability patterns
+- Runs on every PR *and* weekly on a schedule
 
 ---
 
-### 1c. Security Scanning — `codeql-analysis.yml`
+**RIGHT COLUMN — "Validation (Dynamic Testing)"**
 
-```yaml
-# .github/workflows/codeql-analysis.yml
-name: "CodeQL"
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  schedule:
-    - cron: '0 23 * * 0'    # also runs weekly even without new code
+_Subtitle line:_ `run-tests.yml` — pytest across a full environment matrix:
 
-steps:
-  - name: Perform CodeQL Analysis   # scans for known Python vulnerability patterns
-    uses: github/codeql-action/analyze@...
-```
+_Visual: small table (bold the numbers)_
 
-**SQA takeaway:** No code reaches `main` without passing lint, type checks, and a security scan.
+| | Ubuntu | macOS | Windows |
+|---|---|---|---|
+| Python 3.10–3.14 | ✓ | ✓ | ✓ |
+| Python 3.15-dev | ✓ | ✓ | ✓ |
+| PyPy 3.11 | ✓ | ✓ | — |
+| **Total** | | | **≈ 23 combinations** |
 
----
-
-## Layer 2 — Dynamic Analysis (Validation)
-
-> **SQA concept:** Validation = "Are we building the right product?" — running the software and checking behaviour.
-
-### 2a. Automated Test Matrix — `run-tests.yml`
-
+_Code snippet:_
 ```yaml
 # .github/workflows/run-tests.yml
-jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14",
-                         "3.14t",         # free-threaded Python
-                         "3.15-dev",      # unreleased future version
-                         "pypy-3.11"]
-        os: [ubuntu-22.04, macOS-latest, windows-latest]
-    steps:
-    - name: Run tests
-      run: make ci         # pytest with JUnit XML output
+matrix:
+  python-version: ["3.10","3.11","3.12","3.13",
+                   "3.14","3.14t","3.15-dev","pypy-3.11"]
+  os: [ubuntu-22.04, macOS-latest, windows-latest]
 ```
 
-**Result: 8 Python versions × 3 OS = up to 23 combinations per PR**
-(PyPy excluded on Windows due to an OpenSSL/Rust constraint — even that exclusion is documented inline.)
-
-Additional edge-case jobs in the same file:
-- `no_chardet` — tests without the optional character-detection dependency
-- `urllib3` — tests with the older `urllib3 1.x` (backward compatibility)
-
-### 2b. Test Suite Scope
-
+**Test suite scope:**
 ```
-tests/
-  test_requests.py     106 KB   ← main integration suite
-  test_utils.py         31 KB   ← utility functions
-  test_lowlevel.py      15 KB   ← raw socket/TLS behaviour
-  test_testserver.py   5.5 KB   ← tests against a real HTTP server
-  test_structures.py   2.7 KB
-  test_hooks.py        0.4 KB
-  test_adapters.py     0.3 KB
-  testserver/                   ← embedded HTTP server for live request tests
-  certs/                        ← real TLS certificates (incl. expired, mTLS)
+test_requests.py   106 KB  ← main integration suite
+test_utils.py       31 KB
+test_lowlevel.py    15 KB  ← raw TLS/socket behaviour
+testserver/                ← real HTTP server, live requests
 ```
+- Doctests in source code are also verified (`--doctest-modules`)
+- Coverage measured with `pytest-cov` → XML report
 
-Tests also run **doctests** from the source code itself (`--doctest-modules` in pytest config):
+---
+
+### Presenter Notes — Slide 2 (≈ 1 min 30 sec)
+
+> "Let's start with **Verification** — the left side. Verification means checking the code is built correctly, without even running it.
+>
+> Every time someone opens a pull request, three GitHub Actions workflows kick off automatically. First, `lint.yml` runs a tool called Ruff through a pre-commit hook — it enforces PEP 8 style, catches unused imports, and even blocks leftover debug statements. The code literally cannot be merged if this fails.
+>
+> Second, `typecheck.yml` runs Pyright in *strict* mode. Strict mode means every single function parameter and return value must have a type annotation — that's the highest bar Pyright offers.
+>
+> Third, CodeQL does a security scan — scanning for known Python vulnerability patterns. And it doesn't just run on PRs, it runs on a weekly schedule too, even if no code changed.
+>
+> Now **Validation** — the right side. Validation is about running the software and checking it actually behaves correctly. Their pytest suite runs across a matrix: 8 Python versions times 3 operating systems — that's about 23 combinations per PR. They even test against Python 3.15, which hasn't been released yet. The main test file alone is 106 kilobytes. They spin up a real HTTP server during tests — so they're making actual HTTP requests, not just mocking everything."
+
+---
+---
+
+## SLIDE 3 — Process Controls & Summary
+**Layout:** Content slide — top half: three-column process strip. Bottom half: summary table.
+
+### On-Slide Content
+
+**Slide title:**
+> Layer 3: Process Controls — Quality as a Team Discipline
+
+---
+
+**Three-column strip (top half of slide):**
+
+**Column 1 — Structured Defect Reporting**
+`.github/ISSUE_TEMPLATE/`
+- Separate templates for bugs vs. feature requests
+- Forces reporters to document: steps to reproduce, expected vs. actual behaviour
+- _SQA equivalent: defect taxonomy / problem report form_
+
+**Column 2 — Security Vulnerability SLA**
+`.github/SECURITY.md`
+```
+≤ 2 days  → acknowledgement
+≤ 2 weeks → fix released + CVE issued
+Release   → PyPI patch + Red Hat & Debian notified
+```
+- _SQA equivalent: corrective action procedure_
+
+**Column 3 — Contributor & Review Process**
+`docs/dev/contributing.rst`
+- Documents code style, testing requirements, PR workflow
+- Style rules are *machine-enforced* by Ruff — not just guidelines
+- Dependabot opens weekly PRs to keep CI dependencies patched
+
+---
+
+**Summary table (bottom half of slide):**
+
+| SQA Layer | Tool / File | What it enforces |
+|-----------|------------|-----------------|
+| Linting & Formatting | `lint.yml` · Ruff | Style, imports, no debugger calls |
+| Type Checking | `typecheck.yml` · Pyright strict | Full type-safety |
+| Security Scan | `codeql-analysis.yml` · CodeQL | Vulnerability patterns |
+| Automated Testing | `run-tests.yml` · pytest | ≈ 23 environment combos |
+| Coverage | `.coveragerc` · pytest-cov | Measured, XML output |
+| Defect Reporting | Issue templates | Structured bug reports |
+| Security SLA | `SECURITY.md` | 2-day ACK, 2-week fix |
+
+---
+
+**Closing line (bottom of slide, bold, centred):**
+> No separate QA team — the CI pipeline *is* the QA system.
+
+---
+
+### Presenter Notes — Slide 3 (≈ 1 min)
+
+> "The third layer is about process — making quality a team discipline rather than an individual's job.
+>
+> When someone finds a bug, they don't just write it in any format they like. GitHub issue templates force them to fill in a structured form — separate forms for bugs versus feature requests, with fields for reproduction steps and expected behaviour. That's essentially a defect reporting procedure.
+>
+> For security specifically, they have a documented SLA in SECURITY.md: two days to acknowledge, two weeks to ship a fix. The fix gets a CVE number and the maintainers of Red Hat and Debian are notified *before* the public release. That's a formal corrective action procedure.
+>
+> And the contribution guide isn't just a suggestion — code style is machine-enforced by Ruff, so a reviewer can't accidentally wave through a style violation.
+>
+> To wrap up: `requests` has no dedicated QA team. Instead, the CI pipeline *is* the QA system. Every commit is verified statically, validated dynamically across 23 environments, and reviewed through a structured process. That is modern, professional SQA in practice."
+
+---
+
+---
+
+# REFERENCE MATERIAL
+_(Not for slides — detailed evidence for questions from the audience)_
+
+## All CI/CD workflows
+
+| File | Trigger | Purpose |
+|------|---------|---------|
+| `.github/workflows/lint.yml` | push, PR | Ruff lint + format via pre-commit |
+| `.github/workflows/typecheck.yml` | push, PR | Pyright strict on Python 3.10 + 3.14 |
+| `.github/workflows/run-tests.yml` | push, PR | pytest across 23 OS × Python combos |
+| `.github/workflows/codeql-analysis.yml` | push to main, PR, weekly | Security vulnerability scan |
+| `.github/workflows/zizmor.yml` | push, PR | Scans the CI workflows themselves for security issues |
+| `.github/workflows/publish.yml` | release | Builds + publishes to PyPI with attestations |
+| `.github/dependabot.yml` | weekly | Auto-updates GitHub Actions + pre-commit hooks |
+
+## Full Ruff config (pyproject.toml lines 83–118)
 
 ```toml
-# pyproject.toml
+[tool.ruff]
+target-version = "py310"
+src = ["src/requests", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes (undefined names, unused imports)
+    "I",    # isort (import ordering)
+    "UP",   # pyupgrade (modernise syntax)
+    "T10",  # flake8-debugger (no leftover breakpoints)
+]
+ignore = ["E203", "E501", "UP031"]
+
+[tool.ruff.format]
+quote-style = "double"   # Black-compatible
+indent-style = "space"
+
 [tool.pytest.ini_options]
-addopts = "--doctest-modules"    # code examples in docstrings are verified
+addopts = "--doctest-modules"
+minversion = "6.2"
 testpaths = ["tests"]
+
+[tool.pyright]
+include = ["src/requests"]
+typeCheckingMode = "strict"
 ```
 
-### 2c. Coverage Measurement
-
-```ini
-# .coveragerc
-[run]
-omit = requests/packages/*    # exclude vendored third-party code
-```
-
-```makefile
-# Makefile (excerpt)
-coverage:
-    pytest --cov-report term --cov-report xml --cov=requests tests/
-```
-
-Coverage XML output enables integration with tools like Codecov for trend tracking.
-
-**SQA takeaway:** Every PR is validated against the real world — multiple Python runtimes, real HTTP traffic, real TLS handshakes.
-
----
-
-## Layer 3 — Peer Review & Process Controls
-
-> **SQA concept:** Process controls ensure quality is a team discipline, not an individual responsibility.
-
-### 3a. Structured Issue Reporting
-
-`.github/ISSUE_TEMPLATE/` provides separate forms for:
-- **Bug reports** — structured fields for reproduction steps, expected vs actual behaviour
-- **Feature requests** — rationale, alternatives considered
-- **Custom** — for anything else
-
-This is the project's equivalent of a **defect taxonomy / problem reporting procedure**.
-
-### 3b. Formal Security Vulnerability Process (`SECURITY.md`)
-
-```
-Timeline (from SECURITY.md):
-  - Within 2 days:   Receipt confirmed
-  - Within 2 weeks:  Fix released
-  - Release day:     CVE issued, patch published to PyPI,
-                     downstream packagers notified in advance
-                     (Red Hat, Debian Maintainer)
-```
-
-This is a documented **corrective action procedure** for security defects.
-
-### 3c. Contributor Guide (`docs/dev/contributing.rst`)
-
-Covers:
-- Code style requirements (enforced by Ruff — not just guidelines)
-- Testing requirements before submitting a PR
-- The PR review workflow and maintainer expectations
-
-### 3d. Automated Dependency Updates (`dependabot.yml`)
+## Full pre-commit hook chain (.pre-commit-config.yaml)
 
 ```yaml
-# .github/dependabot.yml
-updates:
-  - package-ecosystem: "github-actions"   # keeps CI actions patched
-    schedule: { interval: "weekly" }
-  - package-ecosystem: "pip"              # keeps pre-commit hooks updated
-    schedule: { interval: "weekly" }
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v6.0.0
+  hooks:
+  - id: check-case-conflict
+  - id: check-merge-conflict
+  - id: check-toml
+  - id: check-yaml
+  - id: end-of-file-fixer
+  - id: mixed-line-ending
+  - id: trailing-whitespace
+
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.15.12
+  hooks:
+    - id: ruff-check
+      args: [--fix]
+    - id: ruff-format
+      exclude: tests/test_lowlevel.py
 ```
-
-**SQA takeaway:** Quality is enforced structurally — CI gates block merges, templates standardise defect reports, and security gets a documented SLA.
-
----
-
-## Summary Slide
-
-| SQA Layer | What they do | Tool / File |
-|-----------|-------------|-------------|
-| **Static Analysis** | Lint, format, type-check every commit | `lint.yml`, `typecheck.yml`, Ruff, Pyright |
-| **Security Scan** | Weekly + per-PR vulnerability analysis | `codeql-analysis.yml`, `zizmor.yml` |
-| **Dynamic Testing** | 23-combination pytest matrix | `run-tests.yml`, `tests/` |
-| **Coverage** | pytest-cov + XML report | `.coveragerc`, `Makefile` |
-| **Peer Review** | Contributor guide + enforced CI gates | `CONTRIBUTING.md`, `contributing.rst` |
-| **Defect Reporting** | Structured issue templates | `.github/ISSUE_TEMPLATE/` |
-| **Security SLA** | Formal disclosure + 2-week fix target | `SECURITY.md` |
-
-**Bottom line:** `requests` has no separate "QA team" — the process *is* the QA. Every tool, every workflow, and every template works together so that no defect can merge undetected.
