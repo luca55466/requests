@@ -2,7 +2,6 @@
 
 **Question answered:** How does the project perform Software Quality Assurance?
 **Project:** `psf/requests` — Python HTTP client library
-**Scale:** ~300 M downloads/week · used by 4 M+ repositories
 **Presentation time:** ≤ 3 minutes · 3 slides
 
 ---
@@ -11,33 +10,35 @@
 
 ---
 
-## SLIDE 1 — Title & Thesis
-**Layout:** Title slide with subtitle and a 3-box icon row at the bottom
+## SLIDE 1 — The Three QA Layers
+**Layout:** Full-width content slide. Title + three equal columns, each with a header, one-line definition, and 2–3 bullet points.
 
 ### On-Slide Content
 
-**Title (large, centred):**
-> How does `requests` do Software QA?
+**Slide title:**
+> QA in `requests`: Three Enforced Layers
 
-**Subtitle (medium, centred):**
-> Python's most downloaded HTTP library — 300 M downloads/week, 4 M+ dependents
+**Three equal columns:**
 
-**Three icon boxes (bottom row, equal width, each with a bold label + one-line caption):**
+| 🔍 Verification | ✅ Validation | 📋 Process Controls |
+|---|---|---|
+| *Check code without running it* | *Run the software — does it behave correctly?* | *Make quality a team discipline* |
+| Ruff — lint & format | pytest across **23 environments** | Structured issue templates |
+| Pyright — strict type checking | Real HTTP server in tests | Security vulnerability SLA |
+| CodeQL — security scan | Coverage measured with pytest-cov | Enforced contributor guide |
 
-| Box 1 | Box 2 | Box 3 |
-|-------|-------|-------|
-| 🔍 **Verification** | ✅ **Validation** | 📋 **Process Controls** |
-| Static analysis — check code without running it | Dynamic testing — run the software across every environment | Peer review & defect management |
+**Bottom line (bold, centred):**
+> All three are automated and gate every pull request — no human can bypass them.
 
-> _Hint for PowerPoint: use SmartArt "Three-Process" or three equal rectangle shapes._
+> _Hint for PowerPoint: three equal rectangle shapes or SmartArt "Three-Process"._
 
 ---
 
 ### Presenter Notes — Slide 1 (≈ 30 sec)
 
-> "The project we're looking at is `requests` — it's the Python library everyone uses to make HTTP calls. It's downloaded 300 million times every week, which means its quality really matters.
+> "The answer to how `requests` does QA comes down to three layers — and what makes them interesting is that all three are automated and enforced on every pull request. No one can merge code that fails them.
 >
-> For our SQA question — how do they actually perform quality assurance — the answer comes down to three enforced layers: **Verification** through static analysis, **Validation** through automated testing, and **Process Controls** through structured peer review. Let me walk through each one."
+> Verification checks the code without running it — static analysis. Validation actually runs the software across 23 different environments. And Process Controls are the structural things: how bugs are reported, how security issues are handled, how reviews are conducted. Let me go through each."
 
 ---
 ---
