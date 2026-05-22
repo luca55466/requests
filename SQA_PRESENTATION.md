@@ -10,199 +10,225 @@
 
 ---
 
-## SLIDE 1 — The Three QA Layers
-**Layout:** Full-width content slide. Title + three equal columns, each with a header, one-line definition, and 2–3 bullet points.
+## SLIDE 1 — Verification (Static Analysis)
+**Layout:** Title + two-column content. Left = bullet points. Right = two stacked screenshots.
 
 ### On-Slide Content
 
 **Slide title:**
-> QA in `requests`: Three Enforced Layers
+> Verification: Checking Code Without Running It
 
-**Three equal columns:**
+**Left column — bullets:**
+- Three automated workflows fire on **every push and every PR**
+- **Ruff** (`lint.yml`) — enforces PEP 8, catches unused imports, blocks leftover debugger calls, auto-formats code
+- **Pyright** (`typecheck.yml`) — type-checks in **strict mode**: every function must be fully annotated. Runs on Python 3.10 AND 3.14
+- **CodeQL** (`codeql-analysis.yml`) — scans for Python vulnerability patterns. Runs on every PR *and* on a **weekly schedule**
 
-| 🔍 Verification | ✅ Validation | 📋 Process Controls |
-|---|---|---|
-| *Check code without running it* | *Run the software — does it behave correctly?* | *Make quality a team discipline* |
-| Ruff — lint & format | pytest across **23 environments** | Structured issue templates |
-| Pyright — strict type checking | Real HTTP server in tests | Security vulnerability SLA |
-| CodeQL — security scan | Coverage measured with pytest-cov | Enforced contributor guide |
-
-**Bottom line (bold, centred):**
-> All three are automated and gate every pull request — no human can bypass them.
-
-> _Hint for PowerPoint: three equal rectangle shapes or SmartArt "Three-Process"._
+**Right column — screenshots (see below)**
 
 ---
 
-### Presenter Notes — Slide 1 (≈ 30 sec)
+### Screenshots for Slide 1
 
-> "The answer to how `requests` does QA comes down to three layers — and what makes them interesting is that all three are automated and enforced on every pull request. No one can merge code that fails them.
->
-> Verification checks the code without running it — static analysis. Validation actually runs the software across 23 different environments. And Process Controls are the structural things: how bugs are reported, how security issues are handled, how reviews are conducted. Let me go through each."
+**Screenshot A — PRIMARY**
+File: `pyproject.toml`, lines 83–117
+_(open in VS Code or GitHub, crop to just these lines)_
 
----
----
-
-## SLIDE 2 — Verification & Validation (The Technical Evidence)
-**Layout:** Two-column content slide. Left column = Verification. Right column = Validation.
-
-### On-Slide Content
-
-**Slide title:**
-> Layers 1 & 2: Static Analysis + Automated Testing
-
----
-
-**LEFT COLUMN — "Verification (Static Analysis)"**
-
-_Subtitle line:_ Every push & PR triggers three automated checks:
-
-**Bullet 1 — Linting & Formatting**
-`lint.yml` → runs **Ruff** via pre-commit
-- Checks PEP 8, unused imports, leftover debugger calls
-- Auto-fixes style before code can be merged
-
-_Code snippet (small font, code block):_
-```yaml
-# .github/workflows/lint.yml
-on: [push, pull_request]
-steps:
-  - name: Run pre-commit   # enforces Ruff lint + format
-    uses: pre-commit/action@...
 ```
-
-**Bullet 2 — Type Checking**
-`typecheck.yml` → runs **Pyright** in **strict mode**
-- Every function must have full type annotations
-- Runs on Python 3.10 AND 3.14
-
-_Code snippet:_
-```toml
-# pyproject.toml
+[tool.ruff]
+target-version = "py310"
+...
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "T10",    # flake8-debugger
+]
+...
 [tool.pyright]
-typeCheckingMode = "strict"  # highest possible bar
+include = ["src/requests"]
+typeCheckingMode = "strict"
 ```
 
-**Bullet 3 — Security Scan**
-`codeql-analysis.yml` → **CodeQL** scans for Python vulnerability patterns
-- Runs on every PR *and* weekly on a schedule
+Why: One screenshot proves both tools (Ruff + Pyright) are configured, and `"strict"` is immediately readable at a glance.
 
 ---
 
-**RIGHT COLUMN — "Validation (Dynamic Testing)"**
+**Screenshot B — SUPPORTING**
+File: `.github/workflows/typecheck.yml`, full file (only 32 lines)
 
-_Subtitle line:_ `run-tests.yml` — pytest across a full environment matrix:
+Why: Shows the CI matrix (`python-version: ["3.10", "3.14"]`) and the exact command `python -m pyright src/requests/` — makes it concrete that this runs automatically, not manually.
 
-_Visual: small table (bold the numbers)_
+---
 
-| | Ubuntu | macOS | Windows |
-|---|---|---|---|
-| Python 3.10–3.14 | ✓ | ✓ | ✓ |
-| Python 3.15-dev | ✓ | ✓ | ✓ |
-| PyPy 3.11 | ✓ | ✓ | — |
-| **Total** | | | **≈ 23 combinations** |
+### Presenter Notes — Slide 1 (≈ 1 min)
 
-_Code snippet:_
-```yaml
-# .github/workflows/run-tests.yml
-matrix:
-  python-version: ["3.10","3.11","3.12","3.13",
-                   "3.14","3.14t","3.15-dev","pypy-3.11"]
-  os: [ubuntu-22.04, macOS-latest, windows-latest]
-```
+> "The first layer is Verification — checking the code without running it, which in SQA terms means static analysis.
+>
+> Every single push or pull request automatically triggers three tools. Ruff is a linter and formatter — it checks code style, import ordering, and even blocks leftover breakpoints from debugging. If it fails, the PR cannot be merged.
+>
+> Pyright does type checking, and look at the config on the right — `typeCheckingMode = "strict"`. That's the highest setting Pyright has. Every single function parameter and return value must have a type annotation. No exceptions.
+>
+> And CodeQL runs a security scan — not only on every PR, but also on a weekly schedule even when no code has changed. So new vulnerability patterns are caught retroactively."
 
-**Test suite scope:**
-```
-test_requests.py   106 KB  ← main integration suite
-test_utils.py       31 KB
-test_lowlevel.py    15 KB  ← raw TLS/socket behaviour
-testserver/                ← real HTTP server, live requests
-```
-- Doctests in source code are also verified (`--doctest-modules`)
+---
+---
+
+## SLIDE 2 — Validation (Dynamic Testing)
+**Layout:** Title + left bullets + right screenshot (the matrix YAML is the hero visual).
+
+### On-Slide Content
+
+**Slide title:**
+> Validation: Does the Software Actually Behave Correctly?
+
+**Left column — bullets:**
+- `run-tests.yml` runs **pytest** across a full environment matrix
+- **8 Python versions** × **3 operating systems** = **≈ 23 combinations per PR**
+- Includes Python **3.15-dev** (not yet released) and **PyPy**
+- Tests run against a **real embedded HTTP server** — not mocked requests
 - Coverage measured with `pytest-cov` → XML report
 
----
+**Test suite size (small table or text block):**
+```
+test_requests.py   106 KB   ← main integration suite
+test_utils.py       31 KB
+test_lowlevel.py    15 KB   ← raw TLS/socket behaviour
+```
 
-### Presenter Notes — Slide 2 (≈ 1 min 30 sec)
-
-> "Let's start with **Verification** — the left side. Verification means checking the code is built correctly, without even running it.
->
-> Every time someone opens a pull request, three GitHub Actions workflows kick off automatically. First, `lint.yml` runs a tool called Ruff through a pre-commit hook — it enforces PEP 8 style, catches unused imports, and even blocks leftover debug statements. The code literally cannot be merged if this fails.
->
-> Second, `typecheck.yml` runs Pyright in *strict* mode. Strict mode means every single function parameter and return value must have a type annotation — that's the highest bar Pyright offers.
->
-> Third, CodeQL does a security scan — scanning for known Python vulnerability patterns. And it doesn't just run on PRs, it runs on a weekly schedule too, even if no code changed.
->
-> Now **Validation** — the right side. Validation is about running the software and checking it actually behaves correctly. Their pytest suite runs across a matrix: 8 Python versions times 3 operating systems — that's about 23 combinations per PR. They even test against Python 3.15, which hasn't been released yet. The main test file alone is 106 kilobytes. They spin up a real HTTP server during tests — so they're making actual HTTP requests, not just mocking everything."
+**Right column — screenshot (see below)**
 
 ---
+
+### Screenshots for Slide 2
+
+**Screenshot A — PRIMARY**
+File: `.github/workflows/run-tests.yml`, lines 1–21
+_(crop to the `matrix:` block — the version list is the centrepiece)_
+
+```yaml
+name: Tests
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13",
+                         "3.14", "3.14t", "3.15-dev", "pypy-3.11"]
+        os: [ubuntu-22.04, macOS-latest, windows-latest]
+```
+
+Why: The version list is visually striking — 8 versions, 3 OSes in one block. The audience can count them. `"3.15-dev"` in particular makes a strong point about how thorough this is.
+
 ---
 
-## SLIDE 3 — Process Controls & Summary
-**Layout:** Content slide — top half: three-column process strip. Bottom half: summary table.
+**Screenshot B — SUPPORTING**
+File: `tests/` directory — open in VS Code file explorer or GitHub file browser
+
+Show the folder listing including file sizes:
+```
+test_requests.py     (106 KB)
+test_utils.py         (31 KB)
+test_lowlevel.py      (15 KB)
+testserver/
+certs/
+```
+
+Why: Makes the *volume* of tests tangible. `testserver/` and `certs/` show they test against real network infrastructure, not mocks.
+
+---
+
+### Presenter Notes — Slide 2 (≈ 1 min)
+
+> "Validation is the second layer — this means actually running the software and verifying it behaves correctly. Where Verification was about reading the code, Validation is about executing it.
+>
+> Look at the matrix on the right. Their test workflow runs pytest across 8 Python versions and 3 operating systems — that's 23 combinations on every single pull request. They even test against Python 3.15, which hasn't been officially released yet.
+>
+> And they're not faking it — the `testserver/` folder in the test suite is a real embedded HTTP server. Tests make actual HTTP requests, with real TLS certificates. The main test file is 106 kilobytes of test cases.
+>
+> Coverage is also measured and reported as XML — so there's a traceable quality metric, not just a feeling that tests exist."
+
+---
+---
+
+## SLIDE 3 — Process Controls
+**Layout:** Title + two screenshots side by side + one bullet line underneath each.
 
 ### On-Slide Content
 
 **Slide title:**
-> Layer 3: Process Controls — Quality as a Team Discipline
+> Process Controls: Quality as a Team Discipline
+
+**Two screenshots side by side (see below), each with a 1-line caption underneath**
+
+**Caption under Screenshot A:**
+> Structured bug report template — forces every defect to be documented consistently
+
+**Caption under Screenshot B:**
+> Documented security SLA — 2-day acknowledgement, 2-week fix, CVE issued
+
+**Bottom line (full width, bold):**
+> Style rules aren't guidelines — Ruff enforces them in CI. No reviewer can wave through a violation.
 
 ---
 
-**Three-column strip (top half of slide):**
+### Screenshots for Slide 3
 
-**Column 1 — Structured Defect Reporting**
-`.github/ISSUE_TEMPLATE/`
-- Separate templates for bugs vs. feature requests
-- Forces reporters to document: steps to reproduce, expected vs. actual behaviour
-- _SQA equivalent: defect taxonomy / problem report form_
+**Screenshot A — PRIMARY**
+File: `.github/ISSUE_TEMPLATE/Bug_report.md`, full file (37 lines)
+_(open on GitHub — it renders as a form preview which looks cleaner than raw markdown)_
 
-**Column 2 — Security Vulnerability SLA**
-`.github/SECURITY.md`
 ```
-≤ 2 days  → acknowledgement
-≤ 2 weeks → fix released + CVE issued
-Release   → PyPI patch + Red Hat & Debian notified
+## Expected Result
+## Actual Result
+## Reproduction Steps
+   import requests ...
+## System Information
+   $ python -m requests.help
 ```
-- _SQA equivalent: corrective action procedure_
 
-**Column 3 — Contributor & Review Process**
-`docs/dev/contributing.rst`
-- Documents code style, testing requirements, PR workflow
-- Style rules are *machine-enforced* by Ruff — not just guidelines
-- Dependabot opens weekly PRs to keep CI dependencies patched
+Why: This is the project's defect reporting procedure. The structure (Expected / Actual / Steps / System Info) maps directly to SQA defect taxonomy. Very readable, no explanation needed.
 
 ---
 
-**Summary table (bottom half of slide):**
+**Screenshot B — PRIMARY**
+File: `.github/SECURITY.md`, lines 31–46 (the "Timeline" section)
 
-| SQA Layer | Tool / File | What it enforces |
-|-----------|------------|-----------------|
-| Linting & Formatting | `lint.yml` · Ruff | Style, imports, no debugger calls |
-| Type Checking | `typecheck.yml` · Pyright strict | Full type-safety |
-| Security Scan | `codeql-analysis.yml` · CodeQL | Vulnerability patterns |
-| Automated Testing | `run-tests.yml` · pytest | ≈ 23 environment combos |
-| Coverage | `.coveragerc` · pytest-cov | Measured, XML output |
-| Defect Reporting | Issue templates | Structured bug reports |
-| Security SLA | `SECURITY.md` | 2-day ACK, 2-week fix |
+```
+### Timeline
+
+When you report an issue, one of the project members will respond
+to you within two days at the outside. ...
+
+Our goal is to have a fix for any vulnerability released within
+two weeks of the initial disclosure. ...
+```
+
+Why: A written SLA for defect resolution is exactly what a formal SQA corrective action procedure looks like. The two concrete numbers (2 days, 2 weeks) are immediately legible on a slide.
 
 ---
 
-**Closing line (bottom of slide, bold, centred):**
-> No separate QA team — the CI pipeline *is* the QA system.
+**Optional third screenshot (if space allows)**
+File: `.github/ISSUE_TEMPLATE/` — directory view showing three template files:
+`Bug_report.md`, `Feature_request.md`, `Custom.md`
+
+Why: Shows that different defect types have separate forms — a taxonomy, not a free-text box.
 
 ---
 
 ### Presenter Notes — Slide 3 (≈ 1 min)
 
-> "The third layer is about process — making quality a team discipline rather than an individual's job.
+> "The third layer is process controls — the structures that make quality a team responsibility rather than one person's judgment call.
 >
-> When someone finds a bug, they don't just write it in any format they like. GitHub issue templates force them to fill in a structured form — separate forms for bugs versus feature requests, with fields for reproduction steps and expected behaviour. That's essentially a defect reporting procedure.
+> On the left: the bug report template. When anyone reports a defect, they don't write a free-text email. GitHub forces them through this structured form — Expected Result, Actual Result, Reproduction Steps, System Info. That is a defect reporting procedure, directly equivalent to what a formal QMS would require.
 >
-> For security specifically, they have a documented SLA in SECURITY.md: two days to acknowledge, two weeks to ship a fix. The fix gets a CVE number and the maintainers of Red Hat and Debian are notified *before* the public release. That's a formal corrective action procedure.
+> On the right: the security disclosure SLA from SECURITY.md. Two days to acknowledge, two weeks to ship a fix, CVE number issued, Red Hat and Debian notified before the public release. That's a documented corrective action procedure for security defects.
 >
-> And the contribution guide isn't just a suggestion — code style is machine-enforced by Ruff, so a reviewer can't accidentally wave through a style violation.
->
-> To wrap up: `requests` has no dedicated QA team. Instead, the CI pipeline *is* the QA system. Every commit is verified statically, validated dynamically across 23 environments, and reviewed through a structured process. That is modern, professional SQA in practice."
+> And to tie it back to Verification — the contribution guide isn't just advice. Ruff enforces style automatically in CI, so no reviewer can accidentally approve a violation. The process is structurally enforced, not trust-based."
 
 ---
 
